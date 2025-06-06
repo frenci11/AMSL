@@ -5,10 +5,14 @@ import random
 from random import choice
 from scipy.signal import savgol_filter, medfilt
 from sklearn import preprocessing
+from pathlib import Path
+
 
 global a,dim_DA
 a = 125
 dim_DA = 45
+
+
 
 def inter_data(hr, window=11):
     N = window
@@ -93,7 +97,9 @@ def transformation(dataX):
     return data_raw,data_no,data_ne,data_op,data_pe,data_sc,data_ti
 
 def shuffle(normal_s_raw,normal_s_no,normal_s_ne,normal_s_op,normal_s_pe,normal_s_sc,normal_s_ti):
-    path = '/media/zyx/self_supervised/DSADS/dataset_normalize_together/'
+    path = os.path.abspath('DASADS') + '/dataset_normalize_together/'
+    Path(path).mkdir(parents=True, exist_ok=True) # sanity check
+
     ######################shuffle data#########################
     listA = [l for l in range(normal_s_no.shape[0])]
     random.shuffle(listA)
@@ -166,8 +172,8 @@ def shuffle(normal_s_raw,normal_s_no,normal_s_ne,normal_s_op,normal_s_pe,normal_
 
 
 if __name__ == '__main__':
-    normal = np.load("/media/zyx/self_supervised/DSADS/normal.npy")
-    abnormal = np.load("/media/zyx/self_supervised/DSADS/abnormal.npy")
+    normal = np.load(os.path.abspath('DASADS') + "/normal.npy")
+    abnormal = np.load(os.path.abspath('DASADS') + "/abnormal.npy")
     number = normal.shape[0]
     dataX = np.vstack((normal,abnormal))
 
@@ -193,7 +199,9 @@ if __name__ == '__main__':
     shuffle( data_raw_n,data_no_n,data_ne_n,data_op_n,data_pe_n,data_sc_n,data_ti_n)
 
     ####################################save abnormal data######################
-    path = '/media/zyx/self_supervised/DSADS/dataset_normalize_together/'
+    path = os.path.abspath('DASADS') + '/dataset_normalize_together/'
+    Path(path).mkdir(parents=True, exist_ok=True) # sanity check
+
     np.save(path + "data_raw_abnormal.npy", data_raw_a)
     np.save(path + "data_no_abnormal.npy", data_no_a)
     np.save(path + "data_ne_abnormal.npy", data_ne_a)

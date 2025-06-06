@@ -41,7 +41,12 @@ Anoamly classes including running, ascending stairs, descending stairs and rope 
 
 '''
 import numpy as np
-path = '/media/zyx/self_supervised/DSADS/data/'
+import os
+
+path = os.path.abspath('DASADS') + '/'
+
+print(path)
+
 ac_class = []
 for i in range(1,20):
     if i < 10:
@@ -60,6 +65,7 @@ for i in range(1,61):
     else:
         ac_file.append('s' + str(i))
 
+
 print(ac_class)
 print(ac_person)
 print(ac_file)
@@ -76,7 +82,7 @@ for i in range(14):
     print(len(normal))
 normal = np.array(normal)
 print(normal.shape)
-np.save("/media/zyx/self_supervised/DSADS/normal.npy", normal)
+np.save(os.path.abspath('DASADS') + "/normal.npy", normal)
 
 ###################abnormal class#########################
 abnormal_class = [4,5,11,17,18]
@@ -90,4 +96,4 @@ for i in range(5):
     print(len(abnormal))
 abnormal = np.array(abnormal)
 print(abnormal.shape)
-np.save("/media/zyx/self_supervised/DSADS/abnormal.npy", abnormal)
+np.save(os.path.abspath('DASADS') + "/abnormal.npy", abnormal)
