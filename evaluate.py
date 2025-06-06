@@ -1,7 +1,10 @@
+import os
 import csv
 import numpy as np
 
-csv_file = csv.reader(open(r'train_normal_loss_sum_mse.csv', 'r'))
+model_path = os.path.abspath('DASADS') + '/model_train/'
+
+csv_file = csv.reader(open(model_path + r'train_normal_loss_sum_mse.csv', 'r'))
 data1=[]
 for row in csv_file:
     data1.append(row)
@@ -11,7 +14,7 @@ for i in range(len(data1)):
 bb_t=np.array(b_t)
 thre = np.percentile(bb_t, 98)  #Percentile
 
-csv_file = csv.reader(open(r'normal_loss_sum_mse', 'r'))
+csv_file = csv.reader(open(model_path + r'normal_loss_sum_mse.csv', 'r'))
 data=[]
 for row in csv_file:
     data.append(row)
@@ -24,7 +27,7 @@ print(bb.shape)
 normal_true = bb[bb[:] < thre]
 print('normal_sum :' ,bb.shape[0],'normal_true',normal_true.shape[0])
 
-csv_file = csv.reader(open(r'abnormal_loss_sum_mse', 'r'))
+csv_file = csv.reader(open(model_path + r'abnormal_loss_sum_mse.csv', 'r'))
 data=[]
 for row in csv_file:
     data.append(row)

@@ -1,4 +1,5 @@
 #!/bin/python
+import os
 from keras.callbacks import ModelCheckpoint, LearningRateScheduler
 import argparse
 import math
@@ -11,9 +12,7 @@ from keras.activations import softmax, relu
 from keras.models import *
 from keras.layers import *
 import tensorflow as tf
-import os
-os.environ['TF_CPP_MIN_LOG_LEVEL'] = '1'
-os.environ["CUDA_VISIBLE_DEVICES"] = "-1"
+
 
 # from keras import optimizers, regularizers
 # from keras.losses import categorical_crossentropy
