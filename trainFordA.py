@@ -15,7 +15,6 @@ import tensorflow as tf
 
 import tf2onnx
 
-
 # from keras import optimizers, regularizers
 # from keras.losses import categorical_crossentropy
 # from keras.backend import permute_dimensions
@@ -64,9 +63,9 @@ ap.add_argument("-e12", "--lambda2", type=float,
                 default=0.0002, help="# of lambda2")
 ap.add_argument("-e13", "--batch", type=int,
                 default=16, help="# of batch size")
-ap.add_argument('--data_path', type=str, default=os.path.abspath('DASADS') + '/dataset_normalize_together/',
+ap.add_argument('--data_path', type=str, default=os.path.abspath('FordA') + '/normalized/',
                 help='path to load data')
-ap.add_argument('--model_path', type=str, default=os.path.abspath('DASADS') + '/model_train/',
+ap.add_argument('--model_path', type=str, default=os.path.abspath('FordA') + '/model_train/',
                 help='path to save model')
 
 args = vars(ap.parse_args())
@@ -459,25 +458,26 @@ def conlstm_auto():
 if __name__ == '__main__':
     model = conlstm_auto()
     
-
     # model.compile()
     # tf.saved_model.save(model,'exported_models')
     # tf2onnx.convert.from_keras(model, input_signature=[tf.TensorSpec(model.inputs[0].shape, model.inputs[0].dtype),tf.TensorSpec(model.inputs[1].shape, model.inputs[1].dtype)],output_path='model.onnx')
 
     # exit(0)
 
-    X_train_raw = np.load(path + "data_raw_train.npy")
-    X_train_no = np.load(path + "data_no_train.npy")
-    X_train_ne = np.load(path + "data_ne_train.npy")
-    X_train_op = np.load(path + "data_op_train.npy")
-    X_train_pe = np.load(path + "data_pe_train.npy")
-    X_train_sc = np.load(path + "data_sc_train.npy")
-    X_train_ti = np.load(path + "data_ti_train.npy")
+    X_train = np.load(path + "X_train_normal.npy")
+
+    X_train_raw = X_train[0]
+    X_train_no =  X_train[1]
+    X_train_ne =  X_train[2]
+    X_train_op =  X_train[3]
+    X_train_pe =  X_train[4]
+    X_train_sc =  X_train[5]
+    X_train_ti =  X_train[6]
 
     X_train = np.concatenate((X_train_raw, X_train_no, X_train_ne,
                              X_train_op, X_train_pe, X_train_sc, X_train_ti), axis=-1)
-    X_train = X_train.transpose(0, -1, 1, 2)
-    X_train = np.reshape(X_train, X_train.shape + (1,))
+    #X_train = X_train.transpose(0, -1, 1, 2)
+    #X_train = np.reshape(X_train, X_train.shape + (1,))
 
     ############################# model train#########################
 

@@ -152,30 +152,31 @@ if __name__ == "__main__":
     data_raw,data_no,data_ne,data_op,data_pe,data_sc,data_ti = augment(np.vstack((X_train_normal, X_test)))
 
     X_train_normal_normalized = np.array((
-        data_raw[:X_train.shape[0],:],
-        data_no[:X_train.shape[0],:],
-        data_ne[:X_train.shape[0],:],
-        data_op[:X_train.shape[0],:],
-        data_pe[:X_train.shape[0],:],
-        data_sc[:X_train.shape[0],:],
-        data_ti[:X_train.shape[0],:]
+        data_raw[:X_train_normal.shape[0],:],
+        data_no[:X_train_normal.shape[0],:],
+        data_ne[:X_train_normal.shape[0],:],
+        data_op[:X_train_normal.shape[0],:],
+        data_pe[:X_train_normal.shape[0],:],
+        data_sc[:X_train_normal.shape[0],:],
+        data_ti[:X_train_normal.shape[0],:]
     ))
 
-    X_test_normal_normalized = np.array((
-        data_raw[:X_test.shape[0],:],
-        data_no[:X_test.shape[0],:],
-        data_ne[:X_test.shape[0],:],
-        data_op[:X_test.shape[0],:],
-        data_pe[:X_test.shape[0],:],
-        data_sc[:X_test.shape[0],:],
-        data_ti[:X_test.shape[0],:]
+    X_test_normalized = np.array((
+        data_raw[:X_train_normal.shape[0],:],
+        data_no[:X_train_normal.shape[0],:],
+        data_ne[:X_train_normal.shape[0],:],
+        data_op[:X_train_normal.shape[0],:],
+        data_pe[:X_train_normal.shape[0],:],
+        data_sc[:X_train_normal.shape[0],:],
+        data_ti[:X_train_normal.shape[0],:]
     ))
     
     Path(os.path.join(folder_name, 'normalized')).mkdir(parents=True, exist_ok=True)
 
     np.save(os.path.join(folder_name, 'normalized', 'X_train_normal.npy'), X_train_normal_normalized)
 
-    np.save(os.path.join(folder_name, 'normalized', 'X_test_normal.npy'), X_test_normal_normalized)
+    np.save(os.path.join(folder_name, 'normalized', 'X_test.npy'), X_test_normalized)
+    np.save(os.path.join(folder_name, 'normalized', 'Y_test.npy'), Y_test)
 
 
 
