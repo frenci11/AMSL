@@ -3,7 +3,7 @@ import os
 import scipy.io as scio
 import random
 from random import choice
-from scipy.signal import savgol_filter, medfilt
+from scipy.signal import savgol_filter
 from sklearn import preprocessing
 from pathlib import Path
 

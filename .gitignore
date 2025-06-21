@@ -3,3 +3,4 @@ DASADS/dataset_normalize_together
 DASADS/normal.npy
 DASADS/abnormal.npy
 DASADS/**/*.csv
+FordA

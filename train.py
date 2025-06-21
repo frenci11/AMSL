@@ -1,10 +1,10 @@
 #!/bin/python
 import os
-from keras.callbacks import ModelCheckpoint, LearningRateScheduler
+from keras.callbacks import ModelCheckpoint #, LearningRateScheduler
 import argparse
 import math
 import numpy as np
-from keras.optimizers import Adam, SGD
+# from keras.optimizers import Adam, SGD
 from tensorflow.keras.utils import to_categorical
 from keras import backend as K
 from keras.initializers import RandomUniform
@@ -12,6 +12,8 @@ from keras.activations import softmax, relu
 from keras.models import *
 from keras.layers import *
 import tensorflow as tf
+
+import tf2onnx
 
 
 # from keras import optimizers, regularizers
@@ -456,6 +458,13 @@ def conlstm_auto():
 
 if __name__ == '__main__':
     model = conlstm_auto()
+    
+
+    # model.compile()
+    # tf.saved_model.save(model,'exported_models')
+    # tf2onnx.convert.from_keras(model, input_signature=[tf.TensorSpec(model.inputs[0].shape, model.inputs[0].dtype),tf.TensorSpec(model.inputs[1].shape, model.inputs[1].dtype)],output_path='model.onnx')
+
+    # exit(0)
 
     X_train_raw = np.load(path + "data_raw_train.npy")
     X_train_no = np.load(path + "data_no_train.npy")
