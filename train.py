@@ -507,7 +507,8 @@ if __name__ == '__main__':
     y_6 = y_classes[n*5:n*6]
     y_7 = y_classes[n*6:n*7]
 
-    print([X_train.shape,initial_c.shape])
+    print([X_train.shape,initial_c.shape, dataY1.shape]) 
+
 
     history = model.fit([X_train, initial_c],
                         [dataY1, dataY1, y_1, y_2, y_3, y_4, y_5, y_6, y_7], epochs=epochs, batch_size=batch, callbacks=checkpoint, validation_split=0.2)
