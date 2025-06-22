@@ -15,6 +15,7 @@ import tensorflow as tf
 
 import tf2onnx
 
+
 # from keras import optimizers, regularizers
 # from keras.losses import categorical_crossentropy
 # from keras.backend import permute_dimensions
@@ -44,7 +45,7 @@ ap.add_argument("-e2", "--transformation", type=int,
 ap.add_argument("-e3", "--input_dim_x", type=int,
                 default=500, help="# of input_dim_x")
 ap.add_argument("-e4", "--input_dim_y", type=int,
-                default=45, help="# of input_dim_y")
+                default=1, help="# of input_dim_y")
 ap.add_argument("-e5", "--global_mem_dim", type=int,
                 default=500, help="# of global_mem_dim")
 ap.add_argument("-e6", "--local_mem_dim", type=int,
@@ -62,7 +63,7 @@ ap.add_argument("-e11", "--lambda1", type=float,
 ap.add_argument("-e12", "--lambda2", type=float,
                 default=0.0002, help="# of lambda2")
 ap.add_argument("-e13", "--batch", type=int,
-                default=4, help="# of batch size")
+                default=16, help="# of batch size")
 ap.add_argument('--data_path', type=str, default=os.path.abspath('FordA') + '/normalized/',
                 help='path to load data')
 ap.add_argument('--model_path', type=str, default=os.path.abspath('FordA') + '/model_train/',
@@ -183,54 +184,65 @@ class Memory_local(Layer):
     def compute_output_shape(self, input_shape):
        # assert isinstance(input_shape, list)
         # return [(input_shape[0],input_shape[1],input_shape[2],input_shape[3]),(input_shape[0],input_shape[1],input_shape[2],self.mem_dim)]
-        return [(input_shape[0], input_shape[1], input_shape[2], input_shape[3]),
-                (input_shape[0], 1)]
-
+        return [(input_shape[0], input_shape[1], input_shape[2], input_shape[3]), (input_shape[0], 1)]
 
 def slice(x, index):
     
     return x[:, index, :, :, :]
 
+def cropping2d_to_shape(input_tensor, target_height, target_width):
+    input_shape = input_tensor.shape
+    input_height = input_shape[1]
+    input_width = input_shape[2]
+
+    # Compute how much to crop
+    crop_height = input_height - target_height
+    crop_width = input_width - target_width
+
+    crop_top = crop_height // 2
+    crop_bottom = crop_height - crop_top
+    crop_left = crop_width // 2
+    crop_right = crop_width - crop_left
+
+    # Apply Cropping2D
+    cropping_layer = Cropping2D(cropping=((crop_top, crop_bottom), (crop_left, crop_right)))
+    return cropping_layer(input_tensor)
 
 def mse_compute(x, index):
     encoder = x[0][:, index, :, :, :]
     decoder = x[1]
-    return tf.math.reduce_mean(tf.square(encoder-decoder))
 
+    return tf.math.reduce_mean(tf.square(encoder-decoder))
 
 def conlstm_auto():
     print("training start")
     ############################# encoder########################
-    encoder_input1 = Input(
-        shape=(trans, input_dim_x, input_dim_y, 1), name="encoder_input_no")
-    x1 = TimeDistributed(ZeroPadding2D(padding=(
-        (3, 0), (3, 0)), data_format="channels_last", name='zero'), name='T0')(encoder_input1)
-    x1 = TimeDistributed(Conv2D(filter_size1, (4, 4), activation='relu',
-                         padding='same', data_format="channels_last", name='conv1'), name='T1')(x1)
-    x1 = TimeDistributed(MaxPooling2D(
-        (2, 2), padding='same', name='pool1'), name='T2')(x1)
-    x1 = TimeDistributed(Conv2D(filter_size2, (4, 4), activation='relu',
-                         padding='same', data_format="channels_last", name='conv2'), name='T3')(x1)
-    encoded1 = TimeDistributed(MaxPooling2D(
-        (2, 2), padding='same', name='pool2'), name='T4')(x1)
+    encoder_input1 = Input(shape=(trans, input_dim_x, input_dim_y, 1), name="encoder_input_no")
+    print(encoder_input1.shape)
+    x1 = TimeDistributed(ZeroPadding2D(padding=((3, 0), (3, 0)), data_format="channels_last", name='zero'), name='T0')(encoder_input1)
+    # print(x1.shape)
+    x1 = TimeDistributed(Conv2D(filter_size1, (4, 4), activation='relu',padding='same', data_format="channels_last", name='conv1'), name='T1')(x1)
+    # print(x1.shape)
+    x1 = TimeDistributed(MaxPooling2D((2, 2), padding='same', name='pool1'), name='T2')(x1)
+    # print(x1.shape)
+    x1 = TimeDistributed(Conv2D(filter_size2, (4, 4), activation='relu',padding='same', data_format="channels_last", name='conv2'), name='T3')(x1)
+    # print(x1.shape)
+    encoded1 = TimeDistributed(MaxPooling2D((2, 2), padding='same', name='pool2'), name='T4')(x1)
+    # print(encoded1.shape)
 
-    x1_ = Lambda(slice, output_shape=(126, 12, filter_size2),
-                 arguments={'index': 0}, name='L1')(encoded1)
-    x2_ = Lambda(slice, output_shape=(126, 12, filter_size2),
-                 arguments={'index': 1}, name='L2')(encoded1)
-    x3_ = Lambda(slice, output_shape=(126, 12, filter_size2),
-                 arguments={'index': 2}, name='L3')(encoded1)
-    x4_ = Lambda(slice, output_shape=(126, 12, filter_size2),
-                 arguments={'index': 3}, name='L4')(encoded1)
-    x5_ = Lambda(slice, output_shape=(126, 12, filter_size2),
-                 arguments={'index': 4}, name='L5')(encoded1)
-    x6_ = Lambda(slice, output_shape=(126, 12, filter_size2),
-                 arguments={'index': 5}, name='L6')(encoded1)
-    x7_ = Lambda(slice, output_shape=(126, 12, filter_size2),
-                 arguments={'index': 6}, name='L7')(encoded1)
+    encoded1_outshape = list(encoded1.shape)
+    outshape = tuple(encoded1_outshape[2:])
+
+    x1_ = Lambda(slice, output_shape=outshape,arguments={'index': 0}, name='L1')(encoded1)
+    x2_ = Lambda(slice, output_shape=outshape,arguments={'index': 1}, name='L2')(encoded1)
+    x3_ = Lambda(slice, output_shape=outshape,arguments={'index': 2}, name='L3')(encoded1)
+    x4_ = Lambda(slice, output_shape=outshape,arguments={'index': 3}, name='L4')(encoded1)
+    x5_ = Lambda(slice, output_shape=outshape,arguments={'index': 4}, name='L5')(encoded1)
+    x6_ = Lambda(slice, output_shape=outshape,arguments={'index': 5}, name='L6')(encoded1)
+    x7_ = Lambda(slice, output_shape=outshape,arguments={'index': 6}, name='L7')(encoded1)
 
     ############################# self supervision########################
-    inp1 = Input(shape=(126, 12, filter_size2), name='global_class')
+    inp1 = Input(shape=outshape, name='global_class')
     predict = Conv2D(1, (4, 4), padding='same',
                      activation='sigmoid', data_format="channels_last")(inp1)
     predict = Flatten()(predict)
@@ -248,7 +260,7 @@ def conlstm_auto():
     g7 = model_class(x7_)
 
     ############################# global memory########################
-    inp = Input(shape=(126, 12, filter_size2), name='global_input')
+    inp = Input(shape=outshape, name='global_input')
     memory_output, att_weight = Memory_local(
         mem_dim=filter_size2, fea_dim=global_mem_dim)(inp)
     model_global = Model(inputs=inp, outputs=[
@@ -357,8 +369,7 @@ def conlstm_auto():
         2, 2), activation='relu', name='transpose1_3')(xx1_l)
     xx1_l = Conv2DTranspose(filter_size0, (4, 4), padding='same',
                             activation='sigmoid', name='transpose1_4')(xx1_l)
-    decoder1_l = Cropping2D(cropping=(
-        (4, 0), (3, 0)), data_format="channels_last", name='transpose1_5')(xx1_l)
+    decoder1_l = Cropping2D(cropping=((4, 0), (3, 0)), data_format="channels_last", name='transpose1_5')(xx1_l) # cropping2d_to_shape(xx1_l,input_dim_x, input_dim_y)#
 
     xx2_l = Conv2DTranspose(filter_size3, (4, 4), padding='same',
                             activation='relu', name='transpose2_1')(memory_output_no)
@@ -368,8 +379,7 @@ def conlstm_auto():
         2, 2), activation='relu', name='transpose2_3')(xx2_l)
     xx2_l = Conv2DTranspose(filter_size0, (4, 4), padding='same',
                             activation='sigmoid', name='transpose2_4')(xx2_l)
-    decoder2_l = Cropping2D(cropping=(
-        (4, 0), (3, 0)), data_format="channels_last", name='transpose2_5')(xx2_l)
+    decoder2_l = Cropping2D(cropping=((4, 0), (3, 0)), data_format="channels_last", name='transpose2_5')(xx2_l) # cropping2d_to_shape(xx2_l,input_dim_x, input_dim_y)#
 
     xx3_l = Conv2DTranspose(filter_size3, (4, 4), padding='same',
                             activation='relu', name='transpose3_1')(memory_output_ne)
@@ -379,8 +389,7 @@ def conlstm_auto():
         2, 2), activation='relu', name='transpose3_3')(xx3_l)
     xx3_l = Conv2DTranspose(filter_size0, (4, 4), padding='same',
                             activation='sigmoid', name='transpose3_4')(xx3_l)
-    decoder3_l = Cropping2D(cropping=(
-        (4, 0), (3, 0)), data_format="channels_last", name='transpose3_5')(xx3_l)
+    decoder3_l = Cropping2D(cropping=((4, 0), (3, 0)), data_format="channels_last", name='transpose3_5')(xx3_l) # cropping2d_to_shape(xx3_l,input_dim_x, input_dim_y)#
 
     xx4_l = Conv2DTranspose(filter_size3, (4, 4), padding='same',
                             activation='relu', name='transpose4_1')(memory_output_op)
@@ -390,8 +399,7 @@ def conlstm_auto():
         2, 2), activation='relu', name='transpose4_3')(xx4_l)
     xx4_l = Conv2DTranspose(filter_size0, (4, 4), padding='same',
                             activation='sigmoid', name='transpose4_4')(xx4_l)
-    decoder4_l = Cropping2D(cropping=(
-        (4, 0), (3, 0)), data_format="channels_last", name='transpose4_5')(xx4_l)
+    decoder4_l = Cropping2D(cropping=((4, 0), (3, 0)), data_format="channels_last", name='transpose4_5')(xx4_l) # cropping2d_to_shape(xx4_l,input_dim_x, input_dim_y)#
 
     xx5_l = Conv2DTranspose(filter_size3, (4, 4), padding='same',
                             activation='relu', name='transpose5_1')(memory_output_pe)
@@ -401,8 +409,7 @@ def conlstm_auto():
         2, 2), activation='relu', name='transpose5_3')(xx5_l)
     xx5_l = Conv2DTranspose(filter_size0, (4, 4), padding='same',
                             activation='sigmoid', name='transpose5_4')(xx5_l)
-    decoder5_l = Cropping2D(cropping=(
-        (4, 0), (3, 0)), data_format="channels_last", name='transpose5_5')(xx5_l)
+    decoder5_l = Cropping2D(cropping=((4, 0), (3, 0)), data_format="channels_last", name='transpose5_5')(xx5_l) # cropping2d_to_shape(xx5_l,input_dim_x, input_dim_y)#
 
     xx6_l = Conv2DTranspose(filter_size3, (4, 4), padding='same',
                             activation='relu', name='transpose6_1')(memory_output_sc)
@@ -412,8 +419,7 @@ def conlstm_auto():
         2, 2), activation='relu', name='transpose6_3')(xx6_l)
     xx6_l = Conv2DTranspose(filter_size0, (4, 4), padding='same',
                             activation='sigmoid', name='transpose6_4')(xx6_l)
-    decoder6_l = Cropping2D(cropping=(
-        (4, 0), (3, 0)), data_format="channels_last", name='transpose6_5')(xx6_l)
+    decoder6_l = Cropping2D(cropping=((4, 0), (3, 0)), data_format="channels_last", name='transpose6_5')(xx6_l) # cropping2d_to_shape(xx6_l,input_dim_x, input_dim_y)#
 
     xx7_l = Conv2DTranspose(filter_size3, (4, 4), padding='same',
                             activation='relu', name='transpose7_1')(memory_output_ti)
@@ -423,31 +429,23 @@ def conlstm_auto():
         2, 2), activation='relu', name='transpose7_3')(xx7_l)
     xx7_l = Conv2DTranspose(filter_size0, (4, 4), padding='same',
                             activation='sigmoid', name='transpose7_4')(xx7_l)
-    decoder7_l = Cropping2D(cropping=(
-        (4, 0), (3, 0)), data_format="channels_last", name='transpose7_5')(xx7_l)
+    decoder7_l = Cropping2D(cropping=((4, 0), (3, 0)), data_format="channels_last", name='transpose7_5')(xx7_l) # cropping2d_to_shape(xx7_l,input_dim_x, input_dim_y)#
 
-    mse_loss1_l = Lambda(mse_compute, output_shape=(1,), arguments={
-                         'index': 0}, name='mse1')([encoder_input1, decoder1_l])
-    mse_loss2_l = Lambda(mse_compute, output_shape=(1,), arguments={
-                         'index': 1}, name='mse2')([encoder_input1, decoder2_l])
-    mse_loss3_l = Lambda(mse_compute, output_shape=(1,), arguments={
-                         'index': 2}, name='mse3')([encoder_input1, decoder3_l])
-    mse_loss4_l = Lambda(mse_compute, output_shape=(1,), arguments={
-                         'index': 3}, name='mse4')([encoder_input1, decoder4_l])
-    mse_loss5_l = Lambda(mse_compute, output_shape=(1,), arguments={
-                         'index': 4}, name='mse5')([encoder_input1, decoder5_l])
-    mse_loss6_l = Lambda(mse_compute, output_shape=(1,), arguments={
-                         'index': 5}, name='mse6')([encoder_input1, decoder6_l])
-    mse_loss7_l = Lambda(mse_compute, output_shape=(1,), arguments={
-                         'index': 6}, name='mse7')([encoder_input1, decoder7_l])
+    
 
-    mse_loss = Add()([mse_loss1_l, mse_loss2_l, mse_loss3_l,
-                      mse_loss4_l, mse_loss5_l, mse_loss6_l, mse_loss7_l])
+    mse_loss1_l = Lambda(mse_compute, output_shape=(1,), arguments={'index': 0}, name='mse1')([encoder_input1, decoder1_l])
+    mse_loss2_l = Lambda(mse_compute, output_shape=(1,), arguments={'index': 1}, name='mse2')([encoder_input1, decoder2_l])
+    mse_loss3_l = Lambda(mse_compute, output_shape=(1,), arguments={'index': 2}, name='mse3')([encoder_input1, decoder3_l])
+    mse_loss4_l = Lambda(mse_compute, output_shape=(1,), arguments={'index': 3}, name='mse4')([encoder_input1, decoder4_l])
+    mse_loss5_l = Lambda(mse_compute, output_shape=(1,), arguments={'index': 4}, name='mse5')([encoder_input1, decoder5_l])
+    mse_loss6_l = Lambda(mse_compute, output_shape=(1,), arguments={'index': 5}, name='mse6')([encoder_input1, decoder6_l])
+    mse_loss7_l = Lambda(mse_compute, output_shape=(1,), arguments={'index': 6}, name='mse7')([encoder_input1, decoder7_l])
+
+    mse_loss = Add()([mse_loss1_l, mse_loss2_l, mse_loss3_l,mse_loss4_l, mse_loss5_l, mse_loss6_l, mse_loss7_l])
 
     sparse_loss = Add()([memory_global_sparse, memory_local_sparse])
 
-    COMPOSITE_ED = Model(inputs=[encoder_input1, c],
-                         outputs=[mse_loss, sparse_loss, g1, g2, g3, g4, g5, g6, g7])
+    COMPOSITE_ED = Model(inputs=[encoder_input1, c], outputs=[mse_loss, sparse_loss, g1, g2, g3, g4, g5, g6, g7])
 
     COMPOSITE_ED.compile(loss=[lambda y_true, y_pred: y_pred, lambda y_true, y_pred: y_pred, 'categorical_crossentropy',
                                'categorical_crossentropy', 'categorical_crossentropy', 'categorical_crossentropy',
@@ -458,37 +456,29 @@ def conlstm_auto():
 
 if __name__ == '__main__':
     model = conlstm_auto()
-    
+
     # model.compile()
     # tf.saved_model.save(model,'exported_models')
     # tf2onnx.convert.from_keras(model, input_signature=[tf.TensorSpec(model.inputs[0].shape, model.inputs[0].dtype),tf.TensorSpec(model.inputs[1].shape, model.inputs[1].dtype)],output_path='model.onnx')
 
     # exit(0)
 
-    X_train = np.load(path + "X_train_normal.npy")
+    # X_train_raw = np.load(path + "data_raw_train.npy")
+    # X_train_no = np.load(path + "data_no_train.npy")
+    # X_train_ne = np.load(path + "data_ne_train.npy")
+    # X_train_op = np.load(path + "data_op_train.npy")
+    # X_train_pe = np.load(path + "data_pe_train.npy")
+    # X_train_sc = np.load(path + "data_sc_train.npy")
+    # X_train_ti = np.load(path + "data_ti_train.npy")
+# 
+    # X_train = np.concatenate((X_train_raw, X_train_no, X_train_ne,
+    #                          X_train_op, X_train_pe, X_train_sc, X_train_ti), axis=-1)
+    # X_train = X_train.transpose(0, -1, 1, 2)
+    # X_train = np.reshape(X_train, X_train.shape + (1,))
 
-    X_train_raw = X_train[0]
-    X_train_no =  X_train[1]
-    X_train_ne =  X_train[2]
-    X_train_op =  X_train[3]
-    X_train_pe =  X_train[4]
-    X_train_sc =  X_train[5]
-    X_train_ti =  X_train[6]
-    
-    X_train_raw = np.stack([X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw], axis=2)
-    X_train_no = np.stack([X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no], axis=2)
-    X_train_ne = np.stack([X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne], axis=2)
-    X_train_op = np.stack([X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op], axis=2)
-    X_train_pe = np.stack([X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe], axis=2)
-    X_train_sc = np.stack([X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc], axis=2)
-    X_train_ti = np.stack([X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti], axis=2)
+    X_train = np.load(os.path.join(path, 'X_train_normal.npy'))
 
-    X_train = np.concatenate((X_train_raw, X_train_no, X_train_ne,
-                             X_train_op, X_train_pe, X_train_sc, X_train_ti), axis=-1)
-    X_train = X_train.transpose(0, -1, 1, 2)
-    X_train = np.reshape(X_train, X_train.shape + (1,))
-
-    ############################# model train#########################
+    ############################# model train #########################
 
     if not os.path.exists(model_path):
         os.makedirs(model_path)
@@ -516,7 +506,8 @@ if __name__ == '__main__':
     y_6 = y_classes[n*5:n*6]
     y_7 = y_classes[n*6:n*7]
 
-    print([X_train.shape,initial_c.shape, dataY1.shape])
+    print([X_train.shape,initial_c.shape, dataY1.shape]) 
+
 
     history = model.fit([X_train, initial_c],
                         [dataY1, dataY1, y_1, y_2, y_3, y_4, y_5, y_6, y_7], epochs=epochs, batch_size=batch, callbacks=checkpoint, validation_split=0.2)
@@ -536,19 +527,22 @@ if __name__ == '__main__':
     np.savetxt(model_path + 'train_normal_loss_sum_mse.csv',
                predict_label8, delimiter=',')
 
+    exit(0)
     ############################# model test#########################
-    X_test_raw = np.load(path + "data_raw_test.npy")
-    X_test_no = np.load(path + "data_no_test.npy")
-    X_test_ne = np.load(path + "data_ne_test.npy")
-    X_test_op = np.load(path + "data_op_test.npy")
-    X_test_pe = np.load(path + "data_pe_test.npy")
-    X_test_sc = np.load(path + "data_sc_test.npy")
-    X_test_ti = np.load(path + "data_ti_test.npy")
+    # X_test_raw = np.load(path + "data_raw_test.npy")
+    # X_test_no = np.load(path + "data_no_test.npy")
+    # X_test_ne = np.load(path + "data_ne_test.npy")
+    # X_test_op = np.load(path + "data_op_test.npy")
+    # X_test_pe = np.load(path + "data_pe_test.npy")
+    # X_test_sc = np.load(path + "data_sc_test.npy")
+    # X_test_ti = np.load(path + "data_ti_test.npy")
+# 
+    # X_test = np.concatenate((X_test_raw, X_test_no, X_test_ne,
+    #                         X_test_op, X_test_pe, X_test_sc, X_test_ti), axis=-1)
+    # X_test = X_test.transpose(0, -1, 1, 2)
+    # X_test = np.reshape(X_test, X_test.shape + (1,))
 
-    X_test = np.concatenate((X_test_raw, X_test_no, X_test_ne,
-                            X_test_op, X_test_pe, X_test_sc, X_test_ti), axis=-1)
-    X_test = X_test.transpose(0, -1, 1, 2)
-    X_test = np.reshape(X_test, X_test.shape + (1,))
+    X_test = np.load(os.path.join(path, 'X_test.npy'))
     initial_c_test = np.zeros((X_test.shape[0], 1))
 
     [predict_label8, predict_label9, predict_label1, predict_label2, predict_label3, predict_label4, predict_label5,

@@ -149,7 +149,7 @@ if __name__ == "__main__":
 
     print(f'Test dataset shape: {test_dataset.shape}')
     
-    data_raw,data_no,data_ne,data_op,data_pe,data_sc,data_ti = augment(np.vstack((X_train_normal, X_test)))
+    data_raw,data_no,data_ne,data_op,data_pe,data_sc,data_ti = augment(np.vstack((X_train_normal,X_train_abnormal, X_test)))
 
     X_train_normal_normalized = np.array((
         data_raw[:X_train_normal.shape[0],:],
@@ -161,19 +161,42 @@ if __name__ == "__main__":
         data_ti[:X_train_normal.shape[0],:]
     ))
 
-    X_test_normalized = np.array((
-        data_raw[:X_train_normal.shape[0],:],
-        data_no[:X_train_normal.shape[0],:],
-        data_ne[:X_train_normal.shape[0],:],
-        data_op[:X_train_normal.shape[0],:],
-        data_pe[:X_train_normal.shape[0],:],
-        data_sc[:X_train_normal.shape[0],:],
-        data_ti[:X_train_normal.shape[0],:]
+    X_train_normal_normalized = np.transpose(X_train_normal_normalized, (1,0,2,3))
+    # adds an axis since out dataset is 1D but the net accepts 2D timeseries as input
+    X_train_normal_normalized = X_train_normal_normalized[:, :, :, :, np.newaxis]
+
+    X_train_abnormal_normalized = np.array((
+        data_raw[X_train_normal.shape[0]:X_train_normal.shape[0]+X_train_abnormal.shape[0],:],
+        data_no[X_train_normal.shape[0]:X_train_normal.shape[0]+X_train_abnormal.shape[0],:],
+        data_ne[X_train_normal.shape[0]:X_train_normal.shape[0]+X_train_abnormal.shape[0],:],
+        data_op[X_train_normal.shape[0]:X_train_normal.shape[0]+X_train_abnormal.shape[0],:],
+        data_pe[X_train_normal.shape[0]:X_train_normal.shape[0]+X_train_abnormal.shape[0],:],
+        data_sc[X_train_normal.shape[0]:X_train_normal.shape[0]+X_train_abnormal.shape[0],:],
+        data_ti[X_train_normal.shape[0]:X_train_normal.shape[0]+X_train_abnormal.shape[0],:]
     ))
+
+    X_train_abnormal_normalized = np.transpose(X_train_abnormal_normalized, (1,0,2,3))
+    # adds an axis since out dataset is 1D but the net accepts 2D timeseries as input
+    X_train_abnormal_normalized = X_train_abnormal_normalized[:, :, :, :, np.newaxis]
+
+    X_test_normalized = np.array((
+        data_raw[X_train_normal.shape[0]+X_train_abnormal.shape[0]:,:],
+        data_no[X_train_normal.shape[0]+X_train_abnormal.shape[0]:,:],
+        data_ne[X_train_normal.shape[0]+X_train_abnormal.shape[0]:,:],
+        data_op[X_train_normal.shape[0]+X_train_abnormal.shape[0]:,:],
+        data_pe[X_train_normal.shape[0]+X_train_abnormal.shape[0]:,:],
+        data_sc[X_train_normal.shape[0]+X_train_abnormal.shape[0]:,:],
+        data_ti[X_train_normal.shape[0]+X_train_abnormal.shape[0]:,:]
+    ))
+
+    X_test_normalized = np.transpose(X_test_normalized, (1,0,2,3))
+    # adds an axis since out dataset is 1D but the net accepts 2D timeseries as input
+    X_test_normalized = X_test_normalized[:, :, :, :, np.newaxis]
     
     Path(os.path.join(folder_name, 'normalized')).mkdir(parents=True, exist_ok=True)
 
     np.save(os.path.join(folder_name, 'normalized', 'X_train_normal.npy'), X_train_normal_normalized)
+    np.save(os.path.join(folder_name, 'normalized', 'X_train_abnormal.npy'), X_train_abnormal_normalized)
 
     np.save(os.path.join(folder_name, 'normalized', 'X_test.npy'), X_test_normalized)
     np.save(os.path.join(folder_name, 'normalized', 'Y_test.npy'), Y_test)

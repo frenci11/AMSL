@@ -15,7 +15,6 @@ import tensorflow as tf
 
 import tf2onnx
 
-
 # from keras import optimizers, regularizers
 # from keras.losses import categorical_crossentropy
 # from keras.backend import permute_dimensions
@@ -43,7 +42,7 @@ ap.add_argument("-e1", "--epochs", type=int, default=100,
 ap.add_argument("-e2", "--transformation", type=int,
                 default=7, help="# of transformation number")
 ap.add_argument("-e3", "--input_dim_x", type=int,
-                default=125, help="# of input_dim_x")
+                default=500, help="# of input_dim_x")
 ap.add_argument("-e4", "--input_dim_y", type=int,
                 default=45, help="# of input_dim_y")
 ap.add_argument("-e5", "--global_mem_dim", type=int,
@@ -63,10 +62,10 @@ ap.add_argument("-e11", "--lambda1", type=float,
 ap.add_argument("-e12", "--lambda2", type=float,
                 default=0.0002, help="# of lambda2")
 ap.add_argument("-e13", "--batch", type=int,
-                default=16, help="# of batch size")
-ap.add_argument('--data_path', type=str, default=os.path.abspath('DASADS') + '/dataset_normalize_together/',
+                default=4, help="# of batch size")
+ap.add_argument('--data_path', type=str, default=os.path.abspath('FordA') + '/normalized/',
                 help='path to load data')
-ap.add_argument('--model_path', type=str, default=os.path.abspath('DASADS') + '/model_train/',
+ap.add_argument('--model_path', type=str, default=os.path.abspath('FordA') + '/model_train/',
                 help='path to save model')
 
 args = vars(ap.parse_args())
@@ -189,6 +188,7 @@ class Memory_local(Layer):
 
 
 def slice(x, index):
+    
     return x[:, index, :, :, :]
 
 
@@ -201,36 +201,36 @@ def mse_compute(x, index):
 def conlstm_auto():
     print("training start")
     ############################# encoder########################
-    encoder_input1 = Input(shape=(trans, input_dim_x, input_dim_y, 1), name="encoder_input_no")
-    print(encoder_input1.shape)
-    x1 = TimeDistributed(ZeroPadding2D(padding=((3, 0), (3, 0)), data_format="channels_last", name='zero'), name='T0')(encoder_input1)
-    print(x1.shape)
-    x1 = TimeDistributed(Conv2D(filter_size1, (4, 4), activation='relu',padding='same', data_format="channels_last", name='conv1'), name='T1')(x1)
-    print(x1.shape)
-    x1 = TimeDistributed(MaxPooling2D((2, 2), padding='same', name='pool1'), name='T2')(x1)
-    print(x1.shape)
-    x1 = TimeDistributed(Conv2D(filter_size2, (4, 4), activation='relu',padding='same', data_format="channels_last", name='conv2'), name='T3')(x1)
-    print(x1.shape)
-    encoded1 = TimeDistributed(MaxPooling2D((2, 2), padding='same', name='pool2'), name='T4')(x1)
-    print(encoded1.shape)
+    encoder_input1 = Input(
+        shape=(trans, input_dim_x, input_dim_y, 1), name="encoder_input_no")
+    x1 = TimeDistributed(ZeroPadding2D(padding=(
+        (3, 0), (3, 0)), data_format="channels_last", name='zero'), name='T0')(encoder_input1)
+    x1 = TimeDistributed(Conv2D(filter_size1, (4, 4), activation='relu',
+                         padding='same', data_format="channels_last", name='conv1'), name='T1')(x1)
+    x1 = TimeDistributed(MaxPooling2D(
+        (2, 2), padding='same', name='pool1'), name='T2')(x1)
+    x1 = TimeDistributed(Conv2D(filter_size2, (4, 4), activation='relu',
+                         padding='same', data_format="channels_last", name='conv2'), name='T3')(x1)
+    encoded1 = TimeDistributed(MaxPooling2D(
+        (2, 2), padding='same', name='pool2'), name='T4')(x1)
 
-    x1_ = Lambda(slice, output_shape=(32, 12, filter_size2),
+    x1_ = Lambda(slice, output_shape=(126, 12, filter_size2),
                  arguments={'index': 0}, name='L1')(encoded1)
-    x2_ = Lambda(slice, output_shape=(32, 12, filter_size2),
+    x2_ = Lambda(slice, output_shape=(126, 12, filter_size2),
                  arguments={'index': 1}, name='L2')(encoded1)
-    x3_ = Lambda(slice, output_shape=(32, 12, filter_size2),
+    x3_ = Lambda(slice, output_shape=(126, 12, filter_size2),
                  arguments={'index': 2}, name='L3')(encoded1)
-    x4_ = Lambda(slice, output_shape=(32, 12, filter_size2),
+    x4_ = Lambda(slice, output_shape=(126, 12, filter_size2),
                  arguments={'index': 3}, name='L4')(encoded1)
-    x5_ = Lambda(slice, output_shape=(32, 12, filter_size2),
+    x5_ = Lambda(slice, output_shape=(126, 12, filter_size2),
                  arguments={'index': 4}, name='L5')(encoded1)
-    x6_ = Lambda(slice, output_shape=(32, 12, filter_size2),
+    x6_ = Lambda(slice, output_shape=(126, 12, filter_size2),
                  arguments={'index': 5}, name='L6')(encoded1)
-    x7_ = Lambda(slice, output_shape=(32, 12, filter_size2),
+    x7_ = Lambda(slice, output_shape=(126, 12, filter_size2),
                  arguments={'index': 6}, name='L7')(encoded1)
 
     ############################# self supervision########################
-    inp1 = Input(shape=(32, 12, filter_size2), name='global_class')
+    inp1 = Input(shape=(126, 12, filter_size2), name='global_class')
     predict = Conv2D(1, (4, 4), padding='same',
                      activation='sigmoid', data_format="channels_last")(inp1)
     predict = Flatten()(predict)
@@ -248,7 +248,7 @@ def conlstm_auto():
     g7 = model_class(x7_)
 
     ############################# global memory########################
-    inp = Input(shape=(32, 12, filter_size2), name='global_input')
+    inp = Input(shape=(126, 12, filter_size2), name='global_input')
     memory_output, att_weight = Memory_local(
         mem_dim=filter_size2, fea_dim=global_mem_dim)(inp)
     model_global = Model(inputs=inp, outputs=[
@@ -358,7 +358,7 @@ def conlstm_auto():
     xx1_l = Conv2DTranspose(filter_size0, (4, 4), padding='same',
                             activation='sigmoid', name='transpose1_4')(xx1_l)
     decoder1_l = Cropping2D(cropping=(
-        (3, 0), (3, 0)), data_format="channels_last", name='transpose1_5')(xx1_l)
+        (4, 0), (3, 0)), data_format="channels_last", name='transpose1_5')(xx1_l)
 
     xx2_l = Conv2DTranspose(filter_size3, (4, 4), padding='same',
                             activation='relu', name='transpose2_1')(memory_output_no)
@@ -369,7 +369,7 @@ def conlstm_auto():
     xx2_l = Conv2DTranspose(filter_size0, (4, 4), padding='same',
                             activation='sigmoid', name='transpose2_4')(xx2_l)
     decoder2_l = Cropping2D(cropping=(
-        (3, 0), (3, 0)), data_format="channels_last", name='transpose2_5')(xx2_l)
+        (4, 0), (3, 0)), data_format="channels_last", name='transpose2_5')(xx2_l)
 
     xx3_l = Conv2DTranspose(filter_size3, (4, 4), padding='same',
                             activation='relu', name='transpose3_1')(memory_output_ne)
@@ -380,7 +380,7 @@ def conlstm_auto():
     xx3_l = Conv2DTranspose(filter_size0, (4, 4), padding='same',
                             activation='sigmoid', name='transpose3_4')(xx3_l)
     decoder3_l = Cropping2D(cropping=(
-        (3, 0), (3, 0)), data_format="channels_last", name='transpose3_5')(xx3_l)
+        (4, 0), (3, 0)), data_format="channels_last", name='transpose3_5')(xx3_l)
 
     xx4_l = Conv2DTranspose(filter_size3, (4, 4), padding='same',
                             activation='relu', name='transpose4_1')(memory_output_op)
@@ -391,7 +391,7 @@ def conlstm_auto():
     xx4_l = Conv2DTranspose(filter_size0, (4, 4), padding='same',
                             activation='sigmoid', name='transpose4_4')(xx4_l)
     decoder4_l = Cropping2D(cropping=(
-        (3, 0), (3, 0)), data_format="channels_last", name='transpose4_5')(xx4_l)
+        (4, 0), (3, 0)), data_format="channels_last", name='transpose4_5')(xx4_l)
 
     xx5_l = Conv2DTranspose(filter_size3, (4, 4), padding='same',
                             activation='relu', name='transpose5_1')(memory_output_pe)
@@ -402,7 +402,7 @@ def conlstm_auto():
     xx5_l = Conv2DTranspose(filter_size0, (4, 4), padding='same',
                             activation='sigmoid', name='transpose5_4')(xx5_l)
     decoder5_l = Cropping2D(cropping=(
-        (3, 0), (3, 0)), data_format="channels_last", name='transpose5_5')(xx5_l)
+        (4, 0), (3, 0)), data_format="channels_last", name='transpose5_5')(xx5_l)
 
     xx6_l = Conv2DTranspose(filter_size3, (4, 4), padding='same',
                             activation='relu', name='transpose6_1')(memory_output_sc)
@@ -413,7 +413,7 @@ def conlstm_auto():
     xx6_l = Conv2DTranspose(filter_size0, (4, 4), padding='same',
                             activation='sigmoid', name='transpose6_4')(xx6_l)
     decoder6_l = Cropping2D(cropping=(
-        (3, 0), (3, 0)), data_format="channels_last", name='transpose6_5')(xx6_l)
+        (4, 0), (3, 0)), data_format="channels_last", name='transpose6_5')(xx6_l)
 
     xx7_l = Conv2DTranspose(filter_size3, (4, 4), padding='same',
                             activation='relu', name='transpose7_1')(memory_output_ti)
@@ -424,7 +424,7 @@ def conlstm_auto():
     xx7_l = Conv2DTranspose(filter_size0, (4, 4), padding='same',
                             activation='sigmoid', name='transpose7_4')(xx7_l)
     decoder7_l = Cropping2D(cropping=(
-        (3, 0), (3, 0)), data_format="channels_last", name='transpose7_5')(xx7_l)
+        (4, 0), (3, 0)), data_format="channels_last", name='transpose7_5')(xx7_l)
 
     mse_loss1_l = Lambda(mse_compute, output_shape=(1,), arguments={
                          'index': 0}, name='mse1')([encoder_input1, decoder1_l])
@@ -458,20 +458,30 @@ def conlstm_auto():
 
 if __name__ == '__main__':
     model = conlstm_auto()
-
+    
     # model.compile()
     # tf.saved_model.save(model,'exported_models')
     # tf2onnx.convert.from_keras(model, input_signature=[tf.TensorSpec(model.inputs[0].shape, model.inputs[0].dtype),tf.TensorSpec(model.inputs[1].shape, model.inputs[1].dtype)],output_path='model.onnx')
 
     # exit(0)
 
-    X_train_raw = np.load(path + "data_raw_train.npy")
-    X_train_no = np.load(path + "data_no_train.npy")
-    X_train_ne = np.load(path + "data_ne_train.npy")
-    X_train_op = np.load(path + "data_op_train.npy")
-    X_train_pe = np.load(path + "data_pe_train.npy")
-    X_train_sc = np.load(path + "data_sc_train.npy")
-    X_train_ti = np.load(path + "data_ti_train.npy")
+    X_train = np.load(path + "X_train_normal.npy")
+
+    X_train_raw = X_train[0]
+    X_train_no =  X_train[1]
+    X_train_ne =  X_train[2]
+    X_train_op =  X_train[3]
+    X_train_pe =  X_train[4]
+    X_train_sc =  X_train[5]
+    X_train_ti =  X_train[6]
+    
+    X_train_raw = np.stack([X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw,X_train_raw], axis=2)
+    X_train_no = np.stack([X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no,X_train_no], axis=2)
+    X_train_ne = np.stack([X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne,X_train_ne], axis=2)
+    X_train_op = np.stack([X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op,X_train_op], axis=2)
+    X_train_pe = np.stack([X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe,X_train_pe], axis=2)
+    X_train_sc = np.stack([X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc,X_train_sc], axis=2)
+    X_train_ti = np.stack([X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti,X_train_ti], axis=2)
 
     X_train = np.concatenate((X_train_raw, X_train_no, X_train_ne,
                              X_train_op, X_train_pe, X_train_sc, X_train_ti), axis=-1)
@@ -506,8 +516,7 @@ if __name__ == '__main__':
     y_6 = y_classes[n*5:n*6]
     y_7 = y_classes[n*6:n*7]
 
-    print([X_train.shape,initial_c.shape, dataY1.shape]) 
-
+    print([X_train.shape,initial_c.shape, dataY1.shape])
 
     history = model.fit([X_train, initial_c],
                         [dataY1, dataY1, y_1, y_2, y_3, y_4, y_5, y_6, y_7], epochs=epochs, batch_size=batch, callbacks=checkpoint, validation_split=0.2)
