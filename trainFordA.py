@@ -5,15 +5,13 @@ import argparse
 import math
 import numpy as np
 # from keras.optimizers import Adam, SGD
-from tensorflow.keras.utils import to_categorical
+from keras.utils import to_categorical
 from keras import backend as K
 from keras.initializers import RandomUniform
 from keras.activations import softmax, relu
 from keras.models import *
 from keras.layers import *
 import tensorflow as tf
-
-import tf2onnx
 
 
 # from keras import optimizers, regularizers
