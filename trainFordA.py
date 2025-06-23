@@ -560,9 +560,10 @@ if __name__ == '__main__':
                predict_label8, delimiter=',')
 
     X_abnormal = np.load(os.path.join(path, 'X_train_abnormal.npy'))
+    initial_c_ab = np.zeros((X_abnormal.shape[0], 1))
 
     [predict_label8, predict_label9, predict_label1, predict_label2, predict_label3, predict_label4, predict_label5,
-        predict_label6, predict_label7] = model.predict([abnormal, initial_c_ab], batch_size=batch, verbose=1)
+        predict_label6, predict_label7] = model.predict([X_abnormal, initial_c_ab], batch_size=batch, verbose=1)
 
     class_loss = predict_label1[:, 0] + predict_label2[:, 1] + predict_label3[:, 2] + predict_label4[:,
                                                                                                      3] + predict_label5[:,
