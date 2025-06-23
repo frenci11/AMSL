@@ -143,6 +143,7 @@ if __name__ == "__main__":
 
     X_test = test_dataset[:,1:]
     Y_test = test_dataset[:,0]
+    X_test = X_test[Y_test == 1]
 
     print(f'Normal train dataset shape: {X_train_normal.shape}')
     print(f'Abnormal train dataset shape: {X_train_abnormal.shape}')
