@@ -527,7 +527,7 @@ if __name__ == '__main__':
     np.savetxt(model_path + 'train_normal_loss_sum_mse.csv',
                predict_label8, delimiter=',')
 
-    exit(0)
+    # exit(0)
     ############################# model test#########################
     # X_test_raw = np.load(path + "data_raw_test.npy")
     # X_test_no = np.load(path + "data_no_test.npy")
@@ -559,19 +559,7 @@ if __name__ == '__main__':
     np.savetxt(model_path + 'normal_loss_sum_mse.csv',
                predict_label8, delimiter=',')
 
-    abnormal_s_raw = np.load(path + "data_raw_abnormal.npy")
-    abnormal_s_no = np.load(path + "data_no_abnormal.npy")
-    abnormal_s_ne = np.load(path + "data_ne_abnormal.npy")
-    abnormal_s_op = np.load(path + "data_op_abnormal.npy")
-    abnormal_s_pe = np.load(path + "data_pe_abnormal.npy")
-    abnormal_s_sc = np.load(path + "data_sc_abnormal.npy")
-    abnormal_s_ti = np.load(path + "data_ti_abnormal.npy")
-
-    abnormal = np.concatenate((abnormal_s_raw, abnormal_s_no, abnormal_s_ne,
-                              abnormal_s_op, abnormal_s_pe, abnormal_s_sc, abnormal_s_ti), axis=-1)
-    abnormal = abnormal.transpose(0, -1, 1, 2)
-    abnormal = np.reshape(abnormal, abnormal.shape + (1,))
-    initial_c_ab = np.zeros((abnormal.shape[0], 1))
+    X_abnormal = np.load(os.path.join(path, 'X_train_abnormal.npy'))
 
     [predict_label8, predict_label9, predict_label1, predict_label2, predict_label3, predict_label4, predict_label5,
         predict_label6, predict_label7] = model.predict([abnormal, initial_c_ab], batch_size=batch, verbose=1)
